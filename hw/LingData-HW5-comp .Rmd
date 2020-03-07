@@ -1,0 +1,217 @@
+---
+title: "HW 5: Correlations and linear models. Tests for categorial variables"
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(lme4)
+library(vcd)
+```
+
+## 1. Vowel reduction in Russian
+Pavel Duryagin ran an experiment on perception of vowel reduction in Russian language. The dataset `shva` includes the following variables:  
+_time1_ - reaction time 1  
+_duration_ - duration of the vowel in the stimuly (in milliseconds, ms)  
+_time2_ - reaction time 2  
+_f1_, _f2_, _f3_ - the 1st, 2nd and 3rd formant of the vowel measured in Hz (for a short introduction into formants, see [here](https://home.cc.umanitoba.ca/~krussll/phonetics/acoustic/formants.html))  
+_vowel_ - vowel classified according the 3-fold classification (_A_ - _a_ under stress, _a_ - _a/o_ as in the first syllable before the stressed one, _y_ (stands for shva) - _a/o_ as in the second etc. syllable before the stressed one or after the stressed syllable, cf. _g_[_y_]_g_[_a_]_t_[_A_]_l_[_y_] _gogotala_ `guffawed').  
+In this part, we will ask you to analyse correlation between f1, f2, and duration.
+The dataset is available [https://raw.githubusercontent.com/agricolamz/2018-MAG_R_course/master/data/duryagin_ReductionRussian.txt](here).
+
+### 1.0 Read the data from file to the variable `shva`.
+```{r 1.0}
+shva <- read.csv("https://raw.githubusercontent.com/agricolamz/2018-MAG_R_course/master/data/duryagin_ReductionRussian.txt", sep='\t')
+```
+
+### 1.1 Scatterplot `f1` and `f2` using `ggplot()`. 
+Design it to look like the [following](https://raw.githubusercontent.com/agricolamz/2018-MAG_R_course/master/img/duryagin1.png).
+```{r 1.1}
+ggplot(shva, aes(x=f2, y=f1, color=vowel)) + geom_point() + scale_y_reverse() + scale_x_reverse()
+```
+
+### 1.2 Plot the boxplots of `f1` and `f2` for each vowel using `ggplot()`.
+Design it to look like [this](https://raw.githubusercontent.com/agricolamz/2018-MAG_R_course/master/img/duryagin2.png) and [this](https://raw.githubusercontent.com/agricolamz/2018-MAG_R_course/master/img/duryagin3.png).
+```{r 1.2}
+# f1 boxplot
+ggplot(shva, aes(x=vowel, y=f1, color=vowel)) + geom_boxplot() + coord_flip()
+# f2 boxplot
+ggplot(shva, aes(x=vowel, y=f2, color=vowel)) + geom_boxplot() + coord_flip()
+```
+
+
+
+### 1.3 Calculate Pearson's correlation of `f1` and `f2` (all data)
+```{r 1.4}
+cor.test(shva$f1, shva$f2)
+```
+
+### 1.4 Calculate Pearson's correlation of `f1` and `f2` for each vowel
+```{r 1.5}
+#сделать фильтр по гласным
+A <- filter(shva, shva$vowel=='A')
+y <- filter(shva, shva$vowel=='y')
+a <- filter(shva, shva$vowel=='a')
+
+cor.test(A$f1, A$f2)
+cor.test(y$f1, y$f2)
+cor.test(a$f1, a$f2)
+```
+
+## 2 Linear regressions
+
+### 2.1.1 Use the linear regression model to predict `f2` by `f1`.
+```{r 2.1}
+fit1 <- lm(data = shva, f2 ~ f1)
+summary(fit1)
+```
+
+### 2.1.2 Write down the equation for f2 using coefficients from the model (e.g. $y =  b + kx$)
+```{r 2.1.2}
+y(f2) =  -0.42875x(f1) + 1639.70215
+```
+
+### 2.1.3 Provide the adjusted R$^2$
+```{r 2.1.3}
+Adjusted R-squared:  0.3319
+```
+
+### 2.1.4 Add the regression line in the scatterplot 1.1.
+```{r 2.1.4}
+ggplot(shva, aes(x=f2, y=f1)) + geom_point(aes(color=vowel)) + scale_y_reverse() + scale_x_reverse() + geom_smooth(method='lm')
+```
+
+### 2.1.5 Make a scatter plot for `f1` and `f2` grouped by vowels. 
+Use `ggplot()` and `facet_wrap()`.
+
+```{r 2.1.5}
+ggplot(shva, aes(x=f2, y=f1, color=vowel)) + geom_point() + facet_wrap(~vowel) + scale_y_reverse() + scale_x_reverse()
+```
+
+### 2.2.1 Use the linear regression model to predict `f2` by `f1` and `vowel`.
+```{r 2.2.1}
+fit2 <- lm(data = shva, f2 ~ f1 + vowel)
+summary(fit2)
+```
+
+### 2.2.2 What is the intercept of the model?
+```{r 2.2.2}
+Intercept=1365.91639
+```
+
+### 2.2.3 Provide the adjusted R$^2$
+```{r 2.2.3}
+Adjusted R-squared:  0.4801
+```
+
+### 2.2.4 Write down your general conclusions about the relationship between `f1`, `f2`, and `vowels`.
+
+```
+According to the results of our test f1 and f2 have a negative correlation. The lower f1 gets, the bigger f2 is. Also, from the plot we can see that there is a dependency in vowel distribution. 'y' tends to have bigger f1 and smaller f2, 'a' is somewhere in the middle whereas 'A' has smaller f1 and bigger f2 scores. 
+```
+
+## 3. Dutch causative constructions
+
+When the Dutch use two near-synonymous periphrastic causative verbs, *doen* and *laten*?
+```
+       De politie deed/liet de auto stoppen.
+  lit. the police did/let the car stop 
+       'The police stopped the car'
+```
+
+This is a data set on two rival constructions with *doen* and *laten* sampled from the newspaper corpora. The data frame includes 500 observations on the following 7 variables:
+
+* `Aux` -- verb: a factor with levels `doen` and `laten`  
+* `CrSem` -- the semantic class of the Causer: a factor with levels `Anim` (animate) and `Inanim` (inanimate)  
+* `CeSem` -- the semantic class of the Causee: a factor with levels `Anim` (animate) and `Inanim` (inanimate)  
+* `CdEvSem` -- the semantic domain of the caused event expressed by the Effected Predicate: a factor with levels `Ment` (mental) and `NonMent` (e.g. physical or social)  
+* `CeSynt` -- the syntactic status of the Causee: a factor with levels `Clause`, `Impl` (implicit, not expressed), `NP` (noun phrase), `PP` (prepositional phrase)    
+* `EPTrans` -- transitivity or intransitivity of the effected predicate, a factor with two levels `Tr` and `Intr`  
+* `Country` -- a factor with levels `BE` (Belgium) and `NL` (Netherlands)  
+* `Domain` -- a factor with four levels for newspaper domains.    
+
+Data from Natalya Levshina's `RLing` package available (here)[https://raw.githubusercontent.com/agricolamz/2018-MAG_R_course/master/data/dutch_causatives.csv]
+Read more on the constructions in [Levhina, Geerarts, Speelman 2014](https://www.academia.edu/7287585/Dutch_causative_constructions_Quantification_of_meaning_and_meaning_of_quantification_with_Dirk_Geeraerts_and_Dirk_Speelman_).
+
+### 3.0 Read the data from file to the variable `d_caus`.
+```{r 3.0}
+d_caus <- read.csv('https://raw.githubusercontent.com/agricolamz/2018-MAG_R_course/master/data/dutch_causatives.csv')
+```
+
+### 3.1 We are going to test whether the association between `Aux` and other categorical variables (`Aux` ~ `CrSem`, `Aux` ~ `CeSem`, etc) is statistically significant. The assiciation with which variable should be analysed using Fisher's Exact Test and not using Pearson's Chi-squared Test? Is this association statistically significant?
+```{r 3.1}
+fisher.test(d_caus$Aux, d_caus$CeSynt)
+```
+The association between d_caus$Aux and  d_caus$CeSynt should be analysed using Fisher's Exact Test. This association is statistically significant since the p-value=2.2e-16 and it is less than 0.05.
+
+All of the rest of associations except for d_caus$Aux and d_caus$CeSem are statistically significant too because their p-values are lower than the siginificance level of 0.05.
+
+### 3.2. Test the hypothesis that `Aux` and `EPTrans` are not independent with the help of Pearson's Chi-squared Test. 
+```{r 3.2}
+chisq.test(d_caus$Aux, d_caus$EPTrans)
+```
+
+### 3.3 Provide expected frequencies for Pearson's Chi-squared Test of `Aux` and `EPTrans` variables.
+```{r 3.3}
+res <- chisq.test(d_caus$Aux, d_caus$EPTrans)
+res$expected
+```
+
+### 3.4. Calculate the odds ratio for observed frequencies of `Aux` and `EPTrans`
+For 2×2 contigency table
+$$\begin{matrix}
+a & b \\
+c & d
+\end{matrix}
+$$
+one can find *odds ratio* as $(a/c)/(b/d)$.
+
+```{r 3.4}
+res$observed
+(57/182)/(28/233)
+```
+
+### 3.4.1 Find odds ratio for expected frequencies of `Aux` and `EPTrans`
+
+```{r 3.4.1}
+(40.63/198.37)/(44.37/216.63)
+```
+What can you say about odds ratio of expected frequencies for arbitrary data?
+
+### 3.5 Calculate effect size for this test using Cramer's V (phi).
+```{r 3.5}
+tab <- table(d_caus$Aux, d_caus$EPTrans)
+tab
+
+install.packages("lsr")
+library(lsr)
+cramersV(tab)
+```
+
+### 3.6. Report the results of independence test using the following template:
+```
+We have found a significant association between variables d_caus$Aux and d_caus$EPTrans (p-value = 0.0001553, p < 0.001).  The odds of 'Doen' were 2 times higher in (group observed) than in (group expected). Effect size is small (Cramer's V = 0.1691587).
+```
+
+### 3.7 Visualize the distribution using mosaic plot.
+Use `mosaic()` function from `vcd` library.
+```{r 3.7}
+install.packages("vcd")
+library(vcd)
+mosaic(~ Aux + EPTrans, data=d_caus, shade=TRUE, legend=TRUE)
+```
+
+Below is an example of how to use mosaic() with three variables.
+```{r 3.7.1}
+mosaic(~ Aux + CrSem + Country, data=d_caus, shade=TRUE, legend=TRUE)
+```
+
+### 3.8 Why is it not recommended to run multiple Chisq tests of independence on different variables within your dataset whithout adjusting for the multiplicity? (i.e. just testing all the pairs of variables one by one)  
+```
+Conducting multiple analyses entails repeated use of the same data, thereby increasing the type I error rate. It is therefore necessary to consider multiplicity adjustments to account for interim analyses of the same outcome at different time points. 
+```
+
+### 3.9 Provide a short text (300 words) describing the hypothesis of this study and the results of your analysis.
+```{r 3.9}
+In this study we have looked into a data set with examples of two Dutch periphrastic causatives extracted from a newspaper corpora. We conducted several tests to see whether the association between `Aux` and other categorical variables (`Aux` ~ `CrSem`, `Aux` ~ `CeSem` and so on) is statistically significant. We tried two hypotheses. H_0: the association between `Aux` and another categorical variable (`Aux` ~ `CrSem`, `Aux` ~ `CeSem` and so on) is not statistically significant. H_1: the association between `Aux` and another categorical variable is statistically significant. After several Pearsons Chi-squared Tests and Fishers Exact Test we can say that all of the associations except for d_caus$Aux and d_caus$CeSem are statistically significant because their p-values are lower than the siginificance level of 0.05. Also, we can notice some correlation between transitivity and verbs (intransitive-label raises the odds for doen). Effect size is small (Cramer's V = 0.1691587).
+
+```
